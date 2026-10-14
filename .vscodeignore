@@ -5,3 +5,6 @@ src/
 resources/
 .gitignore
 tsconfig.json
+test/
+.test-vscode/
+*.vsix

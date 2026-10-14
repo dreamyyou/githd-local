@@ -18,6 +18,7 @@ export interface Configuration {
 }
 
 export interface FilesViewContext {
+  comparisonLabel?: string;
   repo: GitRepo;
   isStash?: boolean;
   leftRef?: string;
@@ -39,15 +40,17 @@ export interface HistoryViewContext {
 
 function getConfiguration(): Configuration {
   return {
-    withFolder: <boolean>vs.workspace.getConfiguration('githd.explorerView').get('withFolder'),
-    commitsCount: <number>vs.workspace.getConfiguration('githd.logView').get('commitsCount'),
-    expressMode: <boolean>vs.workspace.getConfiguration('githd.logView').get('expressMode'),
-    displayExpress: <boolean>vs.workspace.getConfiguration('githd.logView').get('displayExpressStatus'),
-    blameViewMode: <'disabled' | 'blame' | 'detail'>vs.workspace.getConfiguration('githd.blameView').get('enabled'),
-    disabledInEditor: <boolean>vs.workspace.getConfiguration('githd.editor').get('disabled'),
-    traceLevel: <string>vs.workspace.getConfiguration('githd').get('traceLevel'),
-    cacheEnabled: <boolean>vs.workspace.getConfiguration('githd').get('cacheEnabled'),
-    dataBucketsCount: <number>vs.workspace.getConfiguration('githd.statsView').get('dataBucketsCount')
+    withFolder: <boolean>vs.workspace.getConfiguration('githd-local.explorerView').get('withFolder'),
+    commitsCount: <number>vs.workspace.getConfiguration('githd-local.logView').get('commitsCount'),
+    expressMode: <boolean>vs.workspace.getConfiguration('githd-local.logView').get('expressMode'),
+    displayExpress: <boolean>vs.workspace.getConfiguration('githd-local.logView').get('displayExpressStatus'),
+    blameViewMode: <'disabled' | 'blame' | 'detail'>(
+      vs.workspace.getConfiguration('githd-local.blameView').get('enabled')
+    ),
+    disabledInEditor: <boolean>vs.workspace.getConfiguration('githd-local.editor').get('disabled'),
+    traceLevel: <string>vs.workspace.getConfiguration('githd-local').get('traceLevel'),
+    cacheEnabled: <boolean>vs.workspace.getConfiguration('githd-local').get('cacheEnabled'),
+    dataBucketsCount: <number>vs.workspace.getConfiguration('githd-local.statsView').get('dataBucketsCount')
   };
 }
 
@@ -55,13 +58,13 @@ export class Model {
   private _config: Configuration;
 
   private _historyViewContextTracker = new ContextTracker<HistoryViewContext>(
-    'githd.canGoBackHistoryView',
-    'githd.canGoForwardHistoryView'
+    'githd-local.canGoBackHistoryView',
+    'githd-local.canGoForwardHistoryView'
   );
 
   private _filesViewContextTracker = new ContextTracker<FilesViewContext>(
-    'githd.canGoBackFilesView',
-    'canGoForwardFilesView'
+    'githd-local.canGoBackFilesView',
+    'githd-local.canGoForwardFilesView'
   );
 
   private _onDidChangeConfiguration = new vs.EventEmitter<Configuration>();
@@ -74,7 +77,7 @@ export class Model {
   ) {
     this._config = getConfiguration();
     Tracer.level = this._config.traceLevel;
-    vs.commands.executeCommand('setContext', 'githd.disableInEditor', this._config.disabledInEditor);
+    vs.commands.executeCommand('setContext', 'githd-local.disableInEditor', this._config.disabledInEditor);
     this._loader.enableCache(this._config.cacheEnabled);
 
     vs.workspace.onDidChangeConfiguration(
@@ -95,7 +98,7 @@ export class Model {
           this._config = newConfig;
           this._onDidChangeConfiguration.fire(newConfig);
           Tracer.level = newConfig.traceLevel;
-          vs.commands.executeCommand('setContext', 'githd.disableInEditor', newConfig.disabledInEditor);
+          vs.commands.executeCommand('setContext', 'githd-local.disableInEditor', newConfig.disabledInEditor);
           this._loader.enableCache(newConfig.cacheEnabled);
         }
       },
@@ -127,6 +130,7 @@ export class Model {
       isStash: current.isStash,
       leftRef: current.leftRef,
       rightRef: current.rightRef,
+      comparisonLabel: current.comparisonLabel,
       specifiedPath: current.specifiedPath
     };
   }
@@ -139,8 +143,10 @@ export class Model {
     const currentContext = this.filesViewContext;
     if (
       !currentContext ||
+      currentContext.repo.root != context.repo.root ||
       currentContext.leftRef != context?.leftRef ||
       currentContext.rightRef != context?.rightRef ||
+      currentContext.comparisonLabel != context?.comparisonLabel ||
       currentContext.specifiedPath != context?.specifiedPath ||
       currentContext.focusedLineInfo != context?.focusedLineInfo
     ) {
@@ -150,6 +156,7 @@ export class Model {
         isStash: context.isStash,
         leftRef: context.leftRef,
         rightRef: context.rightRef,
+        comparisonLabel: context.comparisonLabel,
         specifiedPath: context.specifiedPath
       });
       this._onDidChangeFilesViewContext.fire(context);
@@ -157,7 +164,7 @@ export class Model {
 
     // sleep a bit to make sure the context set event is fired before opening the view
     setTimeout(() => {
-      vs.commands.executeCommand('workbench.view.extension.githd-explorer');
+      vs.commands.executeCommand('workbench.view.extension.githd-local-explorer');
     }, 100);
   }
 

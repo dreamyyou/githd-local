@@ -26,31 +26,31 @@ const statsHoverMessage = new vs.MarkdownString('Show stats chart');
 
 function createTitleDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.title')
+    color: new vs.ThemeColor('githdLocal.historyView.title')
   });
 }
 
 function createBranchDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.branch')
+    color: new vs.ThemeColor('githdLocal.historyView.branch')
   });
 }
 
 function createFileDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.filePath')
+    color: new vs.ThemeColor('githdLocal.historyView.filePath')
   });
 }
 
 function createSubjectDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.subject')
+    color: new vs.ThemeColor('githdLocal.historyView.subject')
   });
 }
 
 function createHashDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.hash')
+    color: new vs.ThemeColor('githdLocal.historyView.hash')
   });
 }
 
@@ -65,25 +65,25 @@ function createSelectedHashDecoration(): vs.TextEditorDecorationType {
 
 function createRefDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.ref')
+    color: new vs.ThemeColor('githdLocal.historyView.ref')
   });
 }
 
 function createAuthorDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.author')
+    color: new vs.ThemeColor('githdLocal.historyView.author')
   });
 }
 
 function createEmailDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.email')
+    color: new vs.ThemeColor('githdLocal.historyView.email')
   });
 }
 
 function createMoreDecoration(): vs.TextEditorDecorationType {
   return vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.historyView.more')
+    color: new vs.ThemeColor('githdLocal.historyView.more')
   });
 }
 
@@ -103,7 +103,7 @@ function createLoadingDecoration(): vs.TextEditorDecorationType {
 }
 
 export class HistoryViewProvider implements vs.TextDocumentContentProvider {
-  static scheme: string = 'githd-logs';
+  static scheme: string = 'githd-local-logs';
   static defaultUri: vs.Uri = vs.Uri.parse(HistoryViewProvider.scheme + '://history//Git History');
 
   private _clickableProvider = new ClickableProvider(HistoryViewProvider.scheme);
@@ -162,9 +162,9 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
     this._updatingPromise = new Promise<void>(resolve => (this._updatingResolver = resolve));
     this._updatingResolver(); // start in a resolved state to unblock the first load
 
-    this._expressStatusBar.command = 'githd.setExpressMode';
+    this._expressStatusBar.command = 'githd-local.setExpressMode';
     this._expressStatusBar.tooltip = 'Turn on or off of the history view Express mode';
-    this._repoStatusBar.command = 'githd.setRepository';
+    this._repoStatusBar.command = 'githd-local.setRepository';
     this._repoStatusBar.tooltip = 'Change the git repository';
     this.express = this._model.configuration.expressMode;
     this.commitsCount = this._model.configuration.commitsCount;
@@ -182,7 +182,7 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
         Tracer.verbose(`HistoryView: onDidChangeHistoryViewContext`);
         await this._cancelUpdating();
         const doc: vs.TextDocument = await vs.workspace.openTextDocument(HistoryViewProvider.defaultUri);
-        vs.languages.setTextDocumentLanguage(doc, 'githd');
+        vs.languages.setTextDocumentLanguage(doc, 'githd-local');
         await vs.window.showTextDocument(doc, {
           preview: false,
           preserveFocus: true
@@ -204,7 +204,7 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
     this._gitService.onDidChangeCurrentGitRepo(
       repo => {
         this._currentRepo = repo;
-        this._repoStatusBar.text = 'githd: Repository ' + this._currentRepo?.root;
+        this._repoStatusBar.text = 'githd-local: Repository ' + this._currentRepo?.root;
       },
       null,
       context.subscriptions
@@ -311,8 +311,8 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
   }
   set express(value: boolean) {
     this._express = value;
-    this._expressStatusBar.text = 'githd: Express ' + (value ? 'On' : 'Off');
-    vs.commands.executeCommand('setContext', 'githd.expressMode', value);
+    this._expressStatusBar.text = 'githd-local: Express ' + (value ? 'On' : 'Off');
+    vs.commands.executeCommand('setContext', 'githd-local.expressMode', value);
   }
 
   private set commitsCount(count: number) {
@@ -490,7 +490,7 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
     this._branchDecorationRange = new vs.Range(0, content.length, 0, content.length + context.branch.length);
     this._clickableProvider.addClickable({
       range: this._branchDecorationRange,
-      callback: () => vs.commands.executeCommand('githd.viewBranchHistory', context),
+      callback: () => vs.commands.executeCommand('githd-local.viewBranchHistory', context),
       getHoverMessage: () => branchHoverMessage
     });
     content += context.branch;
@@ -507,7 +507,7 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
     this._emailDecorationOptions.push(range);
     this._clickableProvider.addClickable({
       range,
-      callback: () => vs.commands.executeCommand('githd.viewAuthorHistory'),
+      callback: () => vs.commands.executeCommand('githd-local.viewAuthorHistory'),
       getHoverMessage: () => authorHoverMessage
     });
 
@@ -535,7 +535,7 @@ export class HistoryViewProvider implements vs.TextDocumentContentProvider {
       callback: () =>
         this._express
           ? vs.window.showInformationMessage('Stats chart is only available when Express mode is disabled.')
-          : vs.commands.executeCommand('githd.showStats'),
+          : vs.commands.executeCommand('githd-local.showStats'),
       getHoverMessage: () => statsHoverMessage
     });
     content += statsChart;

@@ -186,7 +186,9 @@ export class Dataloader {
       return '';
     }
 
-    return this._useCache(repo.root) ? this._cache.branch : ((await this._gitService.getCurrentBranch(repo)) ?? '');
+    // HEAD can change without a watcher event, especially in linked worktrees.
+    // Query it directly instead of relying on the asynchronously refreshed history cache.
+    return (await this._gitService.getCurrentBranch(repo)) ?? '';
   }
 
   async getNextCommit(repo: GitRepo | undefined, ref: string): Promise<string> {

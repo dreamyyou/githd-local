@@ -15,7 +15,7 @@ class InfoItem extends vs.TreeItem {
     this.contextValue = 'infoFile';
     this.command = {
       title: '',
-      command: 'githd.openCommitInfo'
+      command: 'githd-local.openCommitInfo'
     };
     this.description = description;
     this.tooltip = description;
@@ -30,7 +30,7 @@ class LineDiffItem extends vs.TreeItem {
     super('Line diff');
     this.command = {
       title: '',
-      command: 'githd.openLineDiff',
+      command: 'githd-local.openLineDiff',
       arguments: [content]
     };
     this.iconPath = getIconUri('info', '');
@@ -53,7 +53,7 @@ class CommittedFileItem extends vs.TreeItem {
     this.contextValue = 'file';
     this.command = {
       title: '',
-      command: 'githd.openCommittedFile',
+      command: 'githd-local.openCommittedFile',
       arguments: [this.file]
     };
     this.resourceUri = vs.Uri.from({
@@ -167,7 +167,7 @@ enum RootCommitPosition {
 }
 
 export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeItem>, vs.FileDecorationProvider {
-  static scheme: string = 'githd-committed';
+  static scheme: string = 'githd-local-committed';
 
   private readonly _rootFolderIcon = {
     dark: getIconUri('structure', 'dark'),
@@ -191,18 +191,22 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
     private _dataloader: Dataloader,
     private _gitService: GitService
   ) {
-    this._view = vs.window.createTreeView('githd.files', { treeDataProvider: this });
+    this._view = vs.window.createTreeView('githd-local.files', { treeDataProvider: this });
     context.subscriptions.push(
       vs.window.registerFileDecorationProvider(this),
-      vs.commands.registerCommand('githd.showFilesTreeView', (folder: FolderItem) => this._showFilesTreeView(folder)),
-      vs.commands.registerCommand('githd.showFilesListView', (folder: FolderItem) => this._showFilesListView(folder)),
-      vs.commands.registerCommand('githd.collapseFolder', (folder: FolderItem) =>
+      vs.commands.registerCommand('githd-local.showFilesTreeView', (folder: FolderItem) =>
+        this._showFilesTreeView(folder)
+      ),
+      vs.commands.registerCommand('githd-local.showFilesListView', (folder: FolderItem) =>
+        this._showFilesListView(folder)
+      ),
+      vs.commands.registerCommand('githd-local.collapseFolder', (folder: FolderItem) =>
         this._setCollapsibleStateOnAll(folder, vs.TreeItemCollapsibleState.Collapsed)
       ),
-      vs.commands.registerCommand('githd.expandFolder', (folder: FolderItem) =>
+      vs.commands.registerCommand('githd-local.expandFolder', (folder: FolderItem) =>
         this._setCollapsibleStateOnAll(folder, vs.TreeItemCollapsibleState.Expanded)
       ),
-      vs.commands.registerCommand('githd.viewFileHistoryFromTree', (fileItem: CommittedFileItem) => {
+      vs.commands.registerCommand('githd-local.viewFileHistoryFromTree', (fileItem: CommittedFileItem) => {
         if (!this._context) {
           Tracer.warning('ExplorerViewProvider: viewFileHistoryFromTree has empty context');
           return;
@@ -213,7 +217,7 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
           branch: ''
         });
       }),
-      vs.commands.registerCommand('githd.viewFolderHistoryFromTree', (folder: FolderItem) => {
+      vs.commands.registerCommand('githd-local.viewFolderHistoryFromTree', (folder: FolderItem) => {
         if (!this._context) {
           Tracer.warning('ExplorerViewProvider: viewFolderHistoryFromTree has empty context');
           return;
@@ -224,29 +228,29 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
           branch: ''
         });
       }),
-      vs.commands.registerCommand('githd.diffFileFromTreeView', (fileItem: CommittedFileItem) => {
+      vs.commands.registerCommand('githd-local.diffFileFromTreeView', (fileItem: CommittedFileItem) => {
         if (!this._context?.rightRef) {
           Tracer.warning('ExplorerViewProvider: diffFileFromTreeView has empty commit ref');
           return;
         }
-        vs.commands.executeCommand('githd.diffFile', fileItem.file.fileUri, null, this._context.rightRef);
+        vs.commands.executeCommand('githd-local.diffFile', fileItem.file.fileUri, null, this._context.rightRef);
       }),
-      vs.commands.registerCommand('githd.diffFolderFromTreeView', (folder: FolderItem) => {
+      vs.commands.registerCommand('githd-local.diffFolderFromTreeView', (folder: FolderItem) => {
         if (!this._context?.rightRef) {
           Tracer.warning('ExplorerViewProvider: diffFolderFromTreeView has empty commit ref');
           return;
         }
         vs.commands.executeCommand(
-          'githd.diffFolder',
+          'githd-local.diffFolder',
           vs.Uri.file(path.join(this._context.repo.root, folder.gitRelativePath)),
           null,
           this._context.rightRef
         );
       }),
-      vs.commands.registerCommand('githd.diffCommitFromTreeView', (folder: FolderItem) =>
-        vs.commands.executeCommand('githd.diffFolderFromTreeView', folder)
+      vs.commands.registerCommand('githd-local.diffCommitFromTreeView', (folder: FolderItem) =>
+        vs.commands.executeCommand('githd-local.diffFolderFromTreeView', folder)
       ),
-      vs.commands.registerCommand('githd.openFile', (fileItem: CommittedFileItem) => {
+      vs.commands.registerCommand('githd-local.openFile', (fileItem: CommittedFileItem) => {
         const editor: vs.TextEditor | undefined = vs.window.activeTextEditor;
         vs.commands.executeCommand('vscode.open', fileItem.file.fileUri).then(() => {
           if (
@@ -259,9 +263,13 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
           }
         });
       }),
-      vs.commands.registerCommand('githd.showFileStats', (folder: FolderItem) => this._setFileWithStats(folder, true)),
-      vs.commands.registerCommand('githd.hideFileStats', (folder: FolderItem) => this._setFileWithStats(folder, false)),
-      vs.commands.registerCommand('githd.copyCommitHash', () =>
+      vs.commands.registerCommand('githd-local.showFileStats', (folder: FolderItem) =>
+        this._setFileWithStats(folder, true)
+      ),
+      vs.commands.registerCommand('githd-local.hideFileStats', (folder: FolderItem) =>
+        this._setFileWithStats(folder, false)
+      ),
+      vs.commands.registerCommand('githd-local.copyCommitHash', () =>
         vs.env.clipboard.writeText(this._context?.rightRef ?? '')
       ),
       this._onDidChange
@@ -385,8 +393,8 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
 
   private async _buildCurrentCommit(): Promise<void> {
     if (!this._context) {
-      vs.commands.executeCommand('setContext', 'githd.hasPreviousCommit', false);
-      vs.commands.executeCommand('setContext', 'githd.hasNextCommit', false);
+      vs.commands.executeCommand('setContext', 'githd-local.hasPreviousCommit', false);
+      vs.commands.executeCommand('setContext', 'githd-local.hasNextCommit', false);
       return;
     }
 
@@ -402,14 +410,14 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
     // Update related contexts asynchronously
     Promise.resolve().then(async () => {
       if (this._isCommitsView()) {
-        vs.commands.executeCommand('setContext', 'githd.commitsView', true);
+        vs.commands.executeCommand('setContext', 'githd-local.commitsView', true);
         const [hasPrevious, hasNext] = await this._dataloader.hasNeighborCommits(this._context?.repo, rightRef);
-        vs.commands.executeCommand('setContext', 'githd.hasPreviousCommit', hasPrevious);
-        vs.commands.executeCommand('setContext', 'githd.hasNextCommit', hasNext);
+        vs.commands.executeCommand('setContext', 'githd-local.hasPreviousCommit', hasPrevious);
+        vs.commands.executeCommand('setContext', 'githd-local.hasNextCommit', hasNext);
       } else {
-        vs.commands.executeCommand('setContext', 'githd.hasPreviousCommit', false);
-        vs.commands.executeCommand('setContext', 'githd.hasNextCommit', false);
-        vs.commands.executeCommand('setContext', 'githd.commitsView', false);
+        vs.commands.executeCommand('setContext', 'githd-local.hasPreviousCommit', false);
+        vs.commands.executeCommand('setContext', 'githd-local.hasNextCommit', false);
+        vs.commands.executeCommand('setContext', 'githd-local.commitsView', false);
       }
     });
 
@@ -472,7 +480,8 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
   }
 
   private _buildDiffBranchTree(files: GitCommittedFile[], leftRef: string, rightRef: string) {
-    this._buildCommitFolder(`Diffs between ${leftRef} and ${rightRef}`, `(${files.length} files)`, files);
+    const label = this._context?.comparisonLabel || `${leftRef} .. ${rightRef}`;
+    this._buildCommitFolder(`Diffs: ${label}`, `(${files.length} files)`, files);
   }
 
   private async _buildPathSpecifiedCommitTree(
@@ -487,7 +496,11 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
 
   private async _buildPathSpecifiedDiffBranchTree(files: GitCommittedFile[], context: FilesViewContext): Promise<void> {
     if (context.specifiedPath) {
-      await this._buildFocusFolder(`${context.leftRef} .. ${context.rightRef}`, files, context.specifiedPath);
+      await this._buildFocusFolder(
+        context.comparisonLabel || `${context.leftRef} .. ${context.rightRef}`,
+        files,
+        context.specifiedPath
+      );
     }
   }
 
@@ -613,7 +626,7 @@ export class ExplorerViewProvider implements vs.TreeDataProvider<CommittedTreeIt
 
   private _setFileWithStats(folder: FolderItem, value: boolean) {
     this._fileWithStats = value;
-    vs.commands.executeCommand('setContext', 'githd.fileWithStats', value);
+    vs.commands.executeCommand('setContext', 'githd-local.fileWithStats', value);
     const travesal = (folder: FolderItem) => {
       folder.files.forEach(file => (file.withStats = this._fileWithStats));
       folder.subFolders.forEach(sub => travesal(sub));

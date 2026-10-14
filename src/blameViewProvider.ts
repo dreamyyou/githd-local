@@ -22,7 +22,7 @@ class BlameViewStatProvider implements vs.Disposable, vs.HoverProvider {
       return;
     }
     let markdown = new vs.MarkdownString(
-      `*<span style="color:var(--vscode-githd-infoView-content);">Committed Files</span>*\r\n>\r\n`
+      `*<span style="color:var(--vscode-githdLocal-infoView-content);">Committed Files</span>*\r\n>\r\n`
     );
     markdown.appendCodeblock(this._owner.blame?.stat ?? '', 'typescript');
     markdown.appendMarkdown('>');
@@ -51,10 +51,10 @@ class BlameViewInfoProvider implements vs.Disposable, vs.HoverProvider {
       const repo = await this._gitService.getGitRepo(blame.file.fsPath);
       const ref: string = blame.hash;
       let args: string = encodeURIComponent(JSON.stringify([repo, ref, blame.file]));
-      const commit: string = `*[${ref}](command:githd.openCommit?${args} "Click to see commit details")*`;
+      const commit: string = `*[${ref}](command:githd-local.openCommit?${args} "Click to see commit details")*`;
       args = encodeURIComponent(JSON.stringify([blame.file]));
-      const file: string = `[*file*](command:githd.viewFileHistory?${args} "Click to see current file history")`;
-      const line: string = `[*line*](command:githd.viewLineHistory?${args} "Click to see current line history")`;
+      const file: string = `[*file*](command:githd-local.viewFileHistory?${args} "Click to see current file history")`;
+      const line: string = `[*line*](command:githd-local.viewLineHistory?${args} "Click to see current line history")`;
       let subject: string = '';
       let lastPREnd = 0;
 
@@ -69,11 +69,11 @@ class BlameViewInfoProvider implements vs.Disposable, vs.HoverProvider {
       Tracer.verbose(`Blame view: ${commit}`);
       const content: string = `
 ${commit}
-*</span><span style="color:var(--vscode-githd-historyView-author);">${blame.author}</span>*
-*<span style="color:var(--vscode-githd-historyView-email);">${email}</span>*
+*</span><span style="color:var(--vscode-githdLocal-historyView-author);">${blame.author}</span>*
+*<span style="color:var(--vscode-githdLocal-historyView-email);">${email}</span>*
 *(${blame.date})*
 &ensp;
-*(<span style="color:var(--vscode-githd-historyView-title);">history</span>: ${file} || ${line})*
+*(<span style="color:var(--vscode-githdLocal-historyView-title);">history</span>: ${file} || ${line})*
 
 ### ${subject}
 
@@ -95,7 +95,7 @@ export class BlameViewProvider {
   private _blameViewMode: 'disabled' | 'blame' | 'detail' = 'disabled';
   private _decoration = vs.window.createTextEditorDecorationType({
     after: {
-      color: new vs.ThemeColor('githd.blameView.info'),
+      color: new vs.ThemeColor('githdLocal.blameView.info'),
       fontStyle: 'italic'
     }
   });

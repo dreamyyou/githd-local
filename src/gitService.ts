@@ -7,8 +7,8 @@ import { execSync, spawn } from 'child_process';
 import { Tracer } from './tracer';
 import { isEmptyHash } from './utils';
 
-const EntrySeparator = '[githd-es]';
-const FormatSeparator = '[githd-fs]';
+const EntrySeparator = '[githd-local-es]';
+const FormatSeparator = '[githd-local-fs]';
 
 function normalizeFilePath(fsPath: string): string {
   fsPath = path.normalize(fsPath);
@@ -24,6 +24,14 @@ function normalizeFilePath(fsPath: string): string {
 export interface GitRepo {
   root: string;
   remoteUrl: string;
+}
+
+export type DiffMode = 'two-dot' | 'three-dot';
+
+export interface ResolvedComparison {
+  leftRef: string;
+  rightRef: string;
+  comparisonLabel: string;
 }
 
 export enum GitRefType {
@@ -133,7 +141,7 @@ export class GitService {
   async updateGitRoots(wsFolders: readonly vs.WorkspaceFolder[] | undefined) {
     // reset repos first. Should optimize it to avoid firing multiple events.
     this._gitRepos = [];
-    vs.commands.executeCommand('setContext', 'githd.hasGitRepo', false);
+    vs.commands.executeCommand('setContext', 'githd-local.hasGitRepo', false);
     this._onDidChangeGitRepositories.fire([]);
 
     const start = Date.now();
@@ -180,7 +188,7 @@ export class GitService {
         const remoteUrl = await this._getRemoteUrl(fsPath);
         repo = { root, remoteUrl };
         this._gitRepos.push(repo);
-        vs.commands.executeCommand('setContext', 'githd.hasGitRepo', true);
+        vs.commands.executeCommand('setContext', 'githd-local.hasGitRepo', true);
         this._onDidChangeGitRepositories.fire(this.getGitRepos());
       }
     }
@@ -262,6 +270,36 @@ export class GitService {
       .filter(line => !!line)
       .map(fn)
       .filter(ref => !!ref) as GitRef[];
+  }
+
+  async resolveComparison(
+    repo: GitRepo,
+    baseRef: string,
+    headRef: string,
+    mode: DiffMode
+  ): Promise<ResolvedComparison> {
+    const [base, head] = await Promise.all([
+      this._exec(['rev-parse', '--verify', '--end-of-options', `${baseRef}^{commit}`], repo.root, true),
+      this._exec(['rev-parse', '--verify', '--end-of-options', `${headRef}^{commit}`], repo.root, true)
+    ]);
+    let leftRef = base.trim();
+    const rightRef = head.trim();
+    if (mode === 'three-dot') {
+      const ancestors = (await this._exec(['merge-base', '--all', leftRef, rightRef], repo.root, true))
+        .trim()
+        .split('\n');
+      if (ancestors.length !== 1 || !ancestors[0]) {
+        throw new Error(
+          'Three-dot diff requires a unique common ancestor. Select an explicit base commit for a two-dot diff.'
+        );
+      }
+      leftRef = ancestors[0];
+    }
+    const baseLabel = baseRef.replace(/^refs\/(heads|remotes|tags)\//, '');
+    const headLabel = headRef.replace(/^refs\/(heads|remotes|tags)\//, '');
+    const operator = mode === 'three-dot' ? '...' : '..';
+    const suffix = mode === 'three-dot' ? ` (merge base ${leftRef.slice(0, 8)})` : '';
+    return { leftRef, rightRef, comparisonLabel: `${baseLabel} ${operator} ${headLabel}${suffix}` };
   }
 
   // returns [total commits stats, [commits]]
@@ -647,7 +685,7 @@ export class GitService {
     return url.replace(/:\/\/.*?\//g, '://github.com/');
   }
 
-  private async _exec(args: string[], cwd: string): Promise<string> {
+  private async _exec(args: string[], cwd: string, strict: boolean = false): Promise<string> {
     const start = Date.now();
     const cmd = this._gitPath;
 
@@ -679,6 +717,9 @@ export class GitService {
       return result;
     } catch (err) {
       Tracer.error(`git command failed: ${cmd} ${args.join(' ')} (${Date.now() - start}ms) ${cwd} ${err}`);
+      if (strict) {
+        throw new Error(String(err).trim() || `git ${args[0]} failed (the refs may have no common ancestor)`);
+      }
       return '';
     }
   }

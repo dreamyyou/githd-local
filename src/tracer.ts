@@ -50,7 +50,7 @@ export class Tracer {
 
   private static get output(): vs.OutputChannel {
     if (!this._output) {
-      this._output = vs.window.createOutputChannel('GitHD');
+      this._output = vs.window.createOutputChannel('GitHD Local');
     }
     return this._output;
   }
@@ -63,7 +63,7 @@ export class Tracer {
     if (this._level >= level) {
       message = `[${this.timestamp}][${TraceLevel[level]}] ${message}`;
       if (this._debugging) {
-        console.log('[GitHD]', message);
+        console.log('[GitHD Local]', message);
       } else {
         this.output.appendLine(message);
       }

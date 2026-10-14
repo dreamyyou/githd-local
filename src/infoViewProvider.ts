@@ -6,14 +6,14 @@ import { decorateWithoutWhitespace, getPullRequests, getTextEditors, prHoverMess
 import { ClickableProvider } from './clickable';
 
 export class InfoViewProvider implements vs.TextDocumentContentProvider {
-  static scheme: string = 'githd-info';
+  static scheme: string = 'githd-local-info';
   static defaultUri: vs.Uri = vs.Uri.parse(InfoViewProvider.scheme + '://authority//Commit Info');
 
   private readonly _prDecoration = vs.window.createTextEditorDecorationType({
     color: new vs.ThemeColor('textLink.foreground')
   });
   private readonly _infoDecoration = vs.window.createTextEditorDecorationType({
-    color: new vs.ThemeColor('githd.infoView.content')
+    color: new vs.ThemeColor('githdLocal.infoView.content')
   });
 
   private _content: string | undefined;

@@ -4,7 +4,7 @@ import { Tracer } from './tracer';
 import { Model } from './model';
 
 export class PanelViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'githd.stats';
+  public static readonly viewType = 'githd-local.stats';
   private _extensionUri: vscode.Uri;
   private _webviewUri: vscode.Uri;
   private _view: vscode.WebviewView | undefined;
